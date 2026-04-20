@@ -1,0 +1,29 @@
+{
+  "name": "hakidd-admin-panel",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "predev": "node scripts/check-node-version.mjs && node scripts/clean-next.mjs",
+    "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "dev:clean": "node scripts/check-node-version.mjs && node scripts/clean-next.mjs && next dev --hostname 127.0.0.1 --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "apexcharts": "^5.10.4",
+    "next": "15.2.0",
+    "react": "19.0.0",
+    "react-apexcharts": "^2.1.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
+  }
+}

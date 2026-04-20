@@ -1,0 +1,7 @@
+{
+  "/dashboard/patterns/page": "app/dashboard/patterns/page.js",
+  "/dashboard/catalogues/page": "app/dashboard/catalogues/page.js",
+  "/dashboard/group-products/page": "app/dashboard/group-products/page.js",
+  "/dashboard/newsletters/page": "app/dashboard/newsletters/page.js",
+  "/dashboard/[entity]/page": "app/dashboard/[entity]/page.js"
+}
