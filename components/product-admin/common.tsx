@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ReactNode } from 'react';
+import { getStoredAdminToken } from '@/lib/admin-auth';
 
 export type Breadcrumb = {
   label: string;
@@ -10,7 +11,7 @@ export type Breadcrumb = {
 };
 
 export function ensureAdminToken(router: ReturnType<typeof useRouter>) {
-  const token = localStorage.getItem('hakidd_admin_token');
+  const token = getStoredAdminToken();
   if (!token) {
     router.push('/login');
     return null;

@@ -3,6 +3,7 @@
 import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet, adminPost } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, Pagination, StatusIcon, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import {
   formatOrderDate,
@@ -167,7 +168,7 @@ export default function OrderHistoryPage() {
   const [filters, setFilters] = useState(queryState);
   const [mode, setMode] = useState<OrderHistoryMode>('grouped');
   const [rows, setRows] = useState<Array<GroupedOrderRow | ProductOrderRow>>([]);
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -642,7 +643,7 @@ export default function OrderHistoryPage() {
                             </div>
                           </td>
                           <td className="text-end">{formatMoney(getGroupedRowTotal(groupedRow))}</td>
-                          <td>{groupedRow.account_number}</td>
+                          <td className="text-break">{groupedRow.account_number}</td>
                           <td>{formatOrderDate(groupedRow.date)}</td>
                           <td style={{ whiteSpace: 'normal' }}>{groupedRow.order_comment || '-'}</td>
                           <td className="text-center">
@@ -686,9 +687,9 @@ export default function OrderHistoryPage() {
                                           <div className="row g-3 align-items-start align-items-lg-center">
                                             <div className="col-12 col-sm-auto col-lg-1">
                                               <div className="text-muted text-uppercase small fw-semibold d-lg-none mb-2">Product</div>
-                                              {item.thumbnail_url ? (
+                                              {getAdminImageUrl(item.thumbnail_url) ? (
                                                 <img
-                                                  src={item.thumbnail_url}
+                                                  src={getAdminImageUrl(item.thumbnail_url) ?? ''}
                                                   alt={item.product_name}
                                                   className="rounded border bg-white"
                                                   style={{ width: 64, height: 64, objectFit: 'cover' }}

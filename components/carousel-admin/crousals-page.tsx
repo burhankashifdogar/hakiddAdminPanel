@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { type CrousalListPayload, type CrousalRow } from './shared';
 
@@ -122,7 +123,7 @@ export default function CrousalsPage() {
                         <td>
                           {row.img_url ? (
                             <img
-                              src={row.img_url}
+                              src={getAdminImageUrl(row.img_url) ?? ''}
                               alt={row.header}
                               className="user-avtar rounded wid-80 hie-80"
                               style={{ objectFit: 'cover' }}

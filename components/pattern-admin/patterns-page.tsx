@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, Pagination, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { type PatternListPayload, type PatternRow, getFileNameFromPath } from './shared';
 
@@ -203,7 +204,7 @@ export default function PatternsPage() {
                         <td>
                           {row.image_url ? (
                             <img
-                              src={row.image_url}
+                              src={getAdminImageUrl(row.image_url) ?? ''}
                               alt={row.name}
                               className="user-avtar rounded wid-50 hie-50"
                               style={{ objectFit: 'cover' }}

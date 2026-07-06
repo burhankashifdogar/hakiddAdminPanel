@@ -3,42 +3,65 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { adminPost } from '@/lib/api';
+import {
+  AdminSessionUser,
+  clearAdminSession,
+  getStoredAdminToken,
+  getStoredAdminUser,
+  hasAdminPermission,
+} from '@/lib/admin-auth';
+import { getRequiredAdminImageUrl } from '@/lib/assets';
+
+const SIDEBAR_STATE_STORAGE_KEY = 'hakidd-admin-sidebar-collapsed';
 
 type MenuItem = {
   href: string;
   label: string;
   icon?: string;
   iconText?: string;
+  permission?: string;
 };
 
 const PRODUCT_ITEMS: MenuItem[] = [
-  { href: '/dashboard/products', label: 'Products' },
-  { href: '/dashboard/class-codes', label: 'Class Code' },
-  { href: '/dashboard/on-sale-products', label: 'On Sale Products' },
-  { href: '/dashboard/manage-product-quantity', label: 'Manage Product Quantity' },
-  { href: '/dashboard/filter-products', label: 'Filter Products' },
-  { href: '/dashboard/additional-products', label: 'Additional Products' },
-  { href: '/dashboard/group-products', label: 'Product Grouping' },
-  { href: '/dashboard/product-group-items', label: 'Product Group Item' },
+  { href: '/dashboard/products', label: 'Products', permission: 'products.read' },
+  { href: '/dashboard/class-codes', label: 'Class Code', permission: 'products.read' },
+  { href: '/dashboard/on-sale-products', label: 'On Sale Products', permission: 'products.read' },
+  { href: '/dashboard/manage-product-quantity', label: 'Manage Product Quantity', permission: 'products.read' },
+  { href: '/dashboard/filter-products', label: 'Filter Products', permission: 'products.read' },
+  { href: '/dashboard/additional-products', label: 'Additional Products', permission: 'products.read' },
+  { href: '/dashboard/group-products', label: 'Product Grouping', permission: 'products.read' },
+  { href: '/dashboard/product-group-items', label: 'Product Group Item', permission: 'products.read' },
 ];
 
 const MAIN_ITEMS: MenuItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: 'ph-duotone ph-gauge' },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: 'material-icons-two-tone', iconText: 'analytics' },
-  { href: '/dashboard/categories', label: 'Categories', icon: 'material-icons-two-tone', iconText: 'category' },
-  { href: '/dashboard/web-users', label: 'Customers', icon: 'ph-duotone ph-user-circle' },
-  { href: '/dashboard/orders', label: 'Orders', icon: 'material-icons-two-tone', iconText: 'shopping_bag' },
-  { href: '/dashboard/pre-orders', label: 'Pre Orders', icon: 'fab fa-first-order' },
-  { href: '/dashboard/search-synonyms', label: 'Search synonyms', icon: 'fas fa-search-plus' },
-  { href: '/dashboard/displays', label: 'Home Page Ads', icon: 'material-icons-two-tone', iconText: 'domain' },
-  { href: '/dashboard/banners', label: 'Banner Management', icon: 'fas fa-bullhorn' },
-  { href: '/dashboard/faqs', label: 'FAQS', icon: 'fas fa-question-circle' },
-  { href: '/dashboard/catalogues', label: 'Catalogues', icon: 'material-icons-two-tone', iconText: 'insert_drive_file' },
-  { href: '/dashboard/crousals', label: 'Carousel', icon: 'fas fa-image' },
-  { href: '/dashboard/patterns', label: 'Free Pattern', icon: 'material-icons-two-tone', iconText: 'picture_as_pdf' },
-  { href: '/dashboard/newsletters', label: 'Newsletter', icon: 'fas fa-newspaper' },
-  { href: '/dashboard/site-settings', label: 'Site Settings', icon: 'ph-duotone ph-globe' },
+  { href: '/dashboard', label: 'Dashboard', icon: 'ph-duotone ph-gauge', permission: 'dashboard.read' },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: 'material-icons-two-tone', iconText: 'analytics', permission: 'analytics.read' },
+  { href: '/dashboard/categories', label: 'Categories', icon: 'material-icons-two-tone', iconText: 'category', permission: 'categories.read' },
+  { href: '/dashboard/web-users', label: 'Customers', icon: 'ph-duotone ph-user-circle', permission: 'customers.read' },
+  { href: '/dashboard/orders', label: 'Orders', icon: 'material-icons-two-tone', iconText: 'shopping_bag', permission: 'orders.read' },
+  { href: '/dashboard/pre-orders', label: 'Pre Orders', icon: 'fab fa-first-order', permission: 'pre_orders.read' },
+  { href: '/dashboard/search-synonyms', label: 'Search synonyms', icon: 'fas fa-search-plus', permission: 'search_synonyms.read' },
+  { href: '/dashboard/displays', label: 'Home Page Ads', icon: 'material-icons-two-tone', iconText: 'domain', permission: 'displays.read' },
+  { href: '/dashboard/banners', label: 'Banner Management', icon: 'fas fa-bullhorn', permission: 'banners.read' },
+  { href: '/dashboard/faqs', label: 'FAQS', icon: 'fas fa-question-circle', permission: 'faqs.read' },
+  { href: '/dashboard/catalogues', label: 'Catalogues', icon: 'material-icons-two-tone', iconText: 'insert_drive_file', permission: 'catalogues.read' },
+  { href: '/dashboard/crousals', label: 'Carousel', icon: 'fas fa-image', permission: 'carousel.read' },
+  { href: '/dashboard/patterns', label: 'Free Pattern', icon: 'material-icons-two-tone', iconText: 'picture_as_pdf', permission: 'patterns.read' },
+  { href: '/dashboard/newsletters', label: 'Newsletter', icon: 'fas fa-newspaper', permission: 'newsletters.read' },
+  { href: '/dashboard/activity-logs', label: 'Activity Logs', icon: 'ph-duotone ph-clock-counter-clockwise', permission: 'activity_logs.read' },
+  { href: '/dashboard/admin-users', label: 'User Management', icon: 'ph-duotone ph-users-three', permission: 'admin_users.read' },
+  { href: '/dashboard/site-settings', label: 'Site Settings', icon: 'ph-duotone ph-globe', permission: 'site_settings.read' },
 ];
+
+const DEFAULT_USER: AdminSessionUser = {
+  id: 0,
+  name: 'Administrator',
+  email: 'admin@hakidd.com',
+  permissions: [],
+  role: null,
+  is_super_admin: false,
+};
 
 function isActive(pathname: string, href: string) {
   if (href === '/dashboard') {
@@ -48,41 +71,80 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function renderMenuIcon(item: MenuItem) {
+  if (item.icon === 'material-icons-two-tone') {
+    return <i className={item.icon}>{item.iconText ?? 'apps'}</i>;
+  }
+
+  return <i className={item.icon} />;
+}
+
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState({ name: 'Administrator', email: 'admin@hakidd.com' });
-  const isProductRoute = PRODUCT_ITEMS.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const [user, setUser] = useState<AdminSessionUser>(DEFAULT_USER);
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY) === 'true';
+  });
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const visibleProductItems = PRODUCT_ITEMS.filter((item) => hasAdminPermission(user, item.permission ?? null));
+  const visibleMainItems = MAIN_ITEMS.filter((item) => hasAdminPermission(user, item.permission ?? null));
+  const isProductRoute = visibleProductItems.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   const [productMenuOpen, setProductMenuOpen] = useState(isProductRoute);
 
   useEffect(() => {
-    const raw = localStorage.getItem('hakidd_admin_user');
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as { name?: string; email?: string };
-      setUser({
-        name: parsed.name || 'Administrator',
-        email: parsed.email || 'admin@hakidd.com',
-      });
-    } catch (_error) {
-      setUser({ name: 'Administrator', email: 'admin@hakidd.com' });
-    }
-  }, []);
+    setUser(getStoredAdminUser() ?? DEFAULT_USER);
+  }, [pathname]);
 
   useEffect(() => {
     setProductMenuOpen(isProductRoute);
   }, [isProductRoute]);
 
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(SIDEBAR_STATE_STORAGE_KEY, String(desktopSidebarHidden));
+  }, [desktopSidebarHidden]);
+
+  async function logout() {
+    const token = getStoredAdminToken();
+
+    try {
+      if (token) {
+        await adminPost('/admin-api/logout', token, {});
+      }
+    } catch {
+      // Ignore transport errors during logout in this stateless flow.
+    } finally {
+      clearAdminSession();
+      router.push('/login');
+    }
+  }
+
+  const brandImagePath = desktopSidebarHidden ? '/assets/images/hakidd-mark.png' : '/assets/images/hakidd-logo.png';
+  const brandImageAlt = desktopSidebarHidden ? 'Hakidd mark' : 'Hakidd logo';
+
   return (
     <>
-      <nav className="pc-sidebar">
+      <nav className={`pc-sidebar ${desktopSidebarHidden ? 'pc-sidebar-icon-only' : ''} ${mobileSidebarOpen ? 'mob-sidebar-active' : ''}`}>
         <div className="navbar-wrapper">
           <div className="m-header">
             <Link href="/dashboard" className="b-brand text-primary">
-              <img src="/assets/images/logo.png" alt="logo image" />
+              <img
+                src={getRequiredAdminImageUrl(brandImagePath)}
+                alt={brandImageAlt}
+                className={`admin-brand-image ${desktopSidebarHidden ? 'admin-brand-image-icon' : 'admin-brand-image-full'}`}
+              />
             </Link>
           </div>
 
@@ -92,67 +154,59 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <label>Navigation</label>
               </li>
 
-              <li className={`pc-item ${isActive(pathname, '/dashboard') ? 'active' : ''}`}>
-                <Link href="/dashboard" className="pc-link">
-                  <span className="pc-micon">
-                    <i className="ph-duotone ph-gauge" />
-                  </span>
-                  <span className="pc-mtext">Dashboard</span>
-                </Link>
-              </li>
+              {visibleMainItems
+                .filter((item) => item.href === '/dashboard' || item.href === '/dashboard/analytics')
+                .map((item) => (
+                  <li key={item.href} className={`pc-item ${isActive(pathname, item.href) ? 'active' : ''}`}>
+                    <Link href={item.href} className="pc-link">
+                      <span className="pc-micon">{renderMenuIcon(item)}</span>
+                      <span className="pc-mtext">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
 
-              <li className={`pc-item ${isActive(pathname, '/dashboard/analytics') ? 'active' : ''}`}>
-                <Link href="/dashboard/analytics" className="pc-link">
-                  <span className="pc-micon">
-                    <i className="material-icons-two-tone">analytics</i>
-                  </span>
-                  <span className="pc-mtext">Analytics</span>
-                </Link>
-              </li>
-
-              <li className={`pc-item ${productMenuOpen ? 'pc-trigger active' : ''}`}>
-                <a
-                  href="#!"
-                  className="pc-link"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setProductMenuOpen((value) => !value);
-                  }}
-                >
-                  <span className="pc-micon">
-                    <i className="ph-duotone ph-layout" />
-                  </span>
-                  <span className="pc-mtext">Products</span>
-                  <span className="pc-arrow">
-                    <i data-feather="chevron-right" />
-                  </span>
-                </a>
-                <ul className="pc-submenu" style={{ display: productMenuOpen ? 'block' : 'none' }}>
-                  {PRODUCT_ITEMS.map((item) => (
-                    <li key={item.href} className={`pc-item ${isActive(pathname, item.href) ? 'active' : ''}`}>
-                      <Link className="pc-link" href={item.href}>
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-
-              {MAIN_ITEMS.slice(2).map((item) => (
-                <li key={item.href} className={`pc-item ${isActive(pathname, item.href) ? 'active' : ''}`}>
-                  <Link href={item.href} className="pc-link">
+              {visibleProductItems.length > 0 ? (
+                <li className={`pc-item pc-hasmenu ${productMenuOpen ? 'pc-trigger active' : ''}`}>
+                  <button
+                    type="button"
+                    className="pc-link"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setProductMenuOpen((value) => !value);
+                    }}
+                    aria-expanded={productMenuOpen}
+                  >
                     <span className="pc-micon">
-                      {item.icon === 'material-icons-two-tone' ? (
-                        <i className={item.icon}>{item.iconText ?? 'apps'}</i>
-                      ) : (
-                        <i className={item.icon} />
-                      )}
+                      <i className="ph-duotone ph-layout" />
                     </span>
-                    <span className="pc-mtext">{item.label}</span>
-                  </Link>
+                    <span className="pc-mtext">Products</span>
+                    <span className="pc-arrow">
+                      <i data-feather="chevron-right" />
+                    </span>
+                  </button>
+                  <ul className="pc-submenu" style={{ display: productMenuOpen ? 'block' : 'none' }}>
+                    {visibleProductItems.map((item) => (
+                      <li key={item.href} className={`pc-item ${isActive(pathname, item.href) ? 'active' : ''}`}>
+                        <Link className="pc-link" href={item.href}>
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
                 </li>
-              ))}
+              ) : null}
+
+              {visibleMainItems
+                .filter((item) => item.href !== '/dashboard' && item.href !== '/dashboard/analytics')
+                .map((item) => (
+                  <li key={item.href} className={`pc-item ${isActive(pathname, item.href) ? 'active' : ''}`}>
+                    <Link href={item.href} className="pc-link">
+                      <span className="pc-micon">{renderMenuIcon(item)}</span>
+                      <span className="pc-mtext">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
             </ul>
           </div>
 
@@ -160,31 +214,48 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <div className="card-body">
               <div className="d-flex align-items-center">
                 <div className="flex-shrink-0">
-                  <img src="/assets/images/user/avatar-1.jpg" alt="user-image" className="user-avtar wid-45 rounded-circle" />
+                  <img
+                    src={getRequiredAdminImageUrl('/assets/images/user/avatar-1.jpg')}
+                    alt="user-image"
+                    className="user-avtar wid-45 rounded-circle"
+                  />
                 </div>
                 <div className="flex-grow-1 ms-3 me-2">
                   <h6 className="mb-0">{user.name}</h6>
-                  <small>Administrator</small>
+                  <small>{user.role?.name ?? 'Administrator'}</small>
                 </div>
               </div>
             </div>
           </div>
         </div>
+        {mobileSidebarOpen ? <div className="pc-menu-overlay" onClick={() => setMobileSidebarOpen(false)} /> : null}
       </nav>
 
-      <header className="pc-header">
+      <header className={`pc-header ${desktopSidebarHidden ? 'pc-header-icon-only' : ''}`}>
         <div className="header-wrapper">
           <div className="me-auto pc-mob-drp">
             <ul className="list-unstyled">
               <li className="pc-h-item pc-sidebar-collapse">
-                <a href="#!" className="pc-head-link ms-0" id="sidebar-hide">
+                <button
+                  type="button"
+                  className="pc-head-link ms-0 btn btn-link p-0 border-0"
+                  onClick={() => setDesktopSidebarHidden((value) => !value)}
+                  aria-label={desktopSidebarHidden ? 'Show sidebar' : 'Hide sidebar'}
+                  aria-pressed={desktopSidebarHidden}
+                >
                   <i className="ti ti-menu-2" />
-                </a>
+                </button>
               </li>
               <li className="pc-h-item pc-sidebar-popup">
-                <a href="#!" className="pc-head-link ms-0" id="mobile-collapse">
+                <button
+                  type="button"
+                  className="pc-head-link ms-0 btn btn-link p-0 border-0"
+                  onClick={() => setMobileSidebarOpen((value) => !value)}
+                  aria-label={mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+                  aria-expanded={mobileSidebarOpen}
+                >
                   <i className="ti ti-menu-2" />
-                </a>
+                </button>
               </li>
             </ul>
           </div>
@@ -200,7 +271,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   aria-haspopup="false"
                   aria-expanded="false"
                 >
-                  <img src="/assets/images/user/avatar-2.jpg" alt="user-image" className="user-avtar" />
+                  <img src={getRequiredAdminImageUrl('/assets/images/user/avatar-2.jpg')} alt="user-image" className="user-avtar" />
                 </a>
                 <div className="dropdown-menu dropdown-user-profile dropdown-menu-end pc-h-dropdown">
                   <div className="dropdown-header d-flex align-items-center justify-content-between">
@@ -212,7 +283,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                         <li className="list-group-item">
                           <div className="d-flex align-items-center">
                             <div className="flex-shrink-0">
-                              <img src="/assets/images/user/avatar-2.jpg" alt="user-image" className="wid-50 rounded-circle" />
+                              <img
+                                src={getRequiredAdminImageUrl('/assets/images/user/avatar-2.jpg')}
+                                alt="user-image"
+                                className="wid-50 rounded-circle"
+                              />
                             </div>
                             <div className="flex-grow-1 mx-3">
                               <h5 className="mb-0">{user.name}</h5>
@@ -226,11 +301,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                           <button
                             type="button"
                             className="dropdown-item border-0 bg-transparent w-100 text-start"
-                            onClick={() => {
-                              localStorage.removeItem('hakidd_admin_token');
-                              localStorage.removeItem('hakidd_admin_user');
-                              router.push('/login');
-                            }}
+                            onClick={() => void logout()}
                           >
                             <span className="d-flex align-items-center">
                               <i className="ph-duotone ph-power" />
@@ -248,9 +319,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
       </header>
 
-      <div className="pc-container">{children}</div>
+      <div className={`pc-container ${desktopSidebarHidden ? 'pc-container-icon-only' : ''}`}>{children}</div>
 
-      <footer className="pc-footer">
+      <footer className={`pc-footer ${desktopSidebarHidden ? 'pc-footer-icon-only' : ''}`}>
         <div className="footer-wrapper container-fluid">
           <div className="row">
             <div className="col-sm-6 my-1">

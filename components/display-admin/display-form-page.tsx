@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ChangeEvent, FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminGet, adminPostForm } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { type DisplayRow, EMPTY_DISPLAY_FORM, mapDisplayToForm } from './shared';
 
@@ -153,7 +154,7 @@ export default function DisplayFormPage({ mode }: { mode: 'create' | 'edit' }) {
   }
 
   const pageTitle = mode === 'create' ? 'Add Home Page Ads' : 'Edit Home Page Ads';
-  const previewImageUrl = selectedImageUrl || currentImageUrl;
+  const previewImageUrl = getAdminImageUrl(selectedImageUrl || currentImageUrl);
   const previewHeading = form.heading.trim() || 'English heading preview';
   const previewText = form.text.trim() || 'The text you enter here will appear in the ad preview.';
   const previewButton = form.button_text.trim() || 'Shop now';

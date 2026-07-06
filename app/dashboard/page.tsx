@@ -1,10 +1,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Script from 'next/script';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ApexOptions } from 'apexcharts';
 import { adminGet } from '@/lib/api';
+import { getStoredAdminToken } from '@/lib/admin-auth';
+import { getRequiredAdminImageUrl } from '@/lib/assets';
 import { normalizeCountryUsers, toIso2, type CountryUsersRow } from '@/lib/country-users';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
@@ -48,6 +52,10 @@ export default function DashboardOverviewPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [countryUsers, setCountryUsers] = useState<CountryUsersRow[]>([]);
   const [mapError, setMapError] = useState('');
+  // The jsvectormap core defines the global `jsVectorMap`; world.js then
+  // registers the `world` map onto it, so world.js must load *after* the core.
+  const [mapCoreLoaded, setMapCoreLoaded] = useState(false);
+  const [mapWorldLoaded, setMapWorldLoaded] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +65,7 @@ export default function DashboardOverviewPage() {
     let attempts = 0;
 
     const loadDashboard = async () => {
-      const token = localStorage.getItem('hakidd_admin_token');
+      const token = getStoredAdminToken();
       if (!token) {
         if (attempts < 10) {
           attempts += 1;
@@ -127,7 +135,7 @@ export default function DashboardOverviewPage() {
   }, [router]);
 
   useEffect(() => {
-    if (countryUsers.length === 0) {
+    if (countryUsers.length === 0 || !mapWorldLoaded) {
       return;
     }
 
@@ -253,7 +261,7 @@ export default function DashboardOverviewPage() {
         mapInstance.destroy();
       }
     };
-  }, [countryUsers]);
+  }, [countryUsers, mapWorldLoaded]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -400,13 +408,30 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="pc-content">
+      {/* Map plugin assets are loaded here (not in the root layout) because the
+          world map only appears on this dashboard page. world.js depends on the
+          global that jsvectormap.min.js defines, so it is only mounted after the
+          core script's onLoad fires; the map init effect waits for both.
+          (The tiny jsvectormap.min.css stays in the root layout.) */}
+      <Script
+        src="/assets/js/plugins/jsvectormap.min.js"
+        strategy="afterInteractive"
+        onReady={() => setMapCoreLoaded(true)}
+      />
+      {mapCoreLoaded && (
+        <Script
+          src="/assets/js/plugins/world.js"
+          strategy="afterInteractive"
+          onReady={() => setMapWorldLoaded(true)}
+        />
+      )}
       <div className="page-header">
         <div className="page-block">
           <div className="row align-items-center">
             <div className="col-md-12">
               <ul className="breadcrumb">
                 <li className="breadcrumb-item">
-                  <a href="/dashboard">Home</a>
+                  <Link href="/dashboard">Home</Link>
                 </li>
                 <li className="breadcrumb-item">
                   <a href="javascript: void(0)">Dashboard</a>
@@ -440,7 +465,7 @@ export default function DashboardOverviewPage() {
         <div className="col-md-4 col-sm-6">
           <div className="card statistics-card-1 overflow-hidden ">
             <div className="card-body">
-              <img src="/assets/images/widget/img-status-4.svg" alt="img" className="img-fluid img-bg" />
+              <img src={getRequiredAdminImageUrl('/assets/images/widget/img-status-4.svg')} alt="img" className="img-fluid img-bg" />
               <h5 className="mb-4">Customers</h5>
               <div className="d-flex align-items-center mt-3">
                 <h3 className="f-w-300 d-flex align-items-center m-b-0">{dashboard?.usersCount ?? 0}</h3>
@@ -463,7 +488,7 @@ export default function DashboardOverviewPage() {
         <div className="col-md-4 col-sm-6">
           <div className="card statistics-card-1 overflow-hidden ">
             <div className="card-body">
-              <img src="/assets/images/widget/img-status-5.svg" alt="img" className="img-fluid img-bg" />
+              <img src={getRequiredAdminImageUrl('/assets/images/widget/img-status-5.svg')} alt="img" className="img-fluid img-bg" />
               <h5 className="mb-4">Categories</h5>
               <div className="d-flex align-items-center mt-3">
                 <h3 className="f-w-300 d-flex align-items-center m-b-0">{dashboard?.categoriesCount ?? 0}</h3>
@@ -486,7 +511,7 @@ export default function DashboardOverviewPage() {
         <div className="col-md-4 col-sm-12">
           <div className="card statistics-card-1 overflow-hidden  bg-brand-color-3">
             <div className="card-body">
-              <img src="/assets/images/widget/img-status-6.svg" alt="img" className="img-fluid img-bg" />
+              <img src={getRequiredAdminImageUrl('/assets/images/widget/img-status-6.svg')} alt="img" className="img-fluid img-bg" />
               <h5 className="mb-4 text-white">Products</h5>
               <div className="d-flex align-items-center mt-3">
                 <h3 className="text-white f-w-300 d-flex align-items-center m-b-0"> {dashboard?.productsCount ?? 0} </h3>

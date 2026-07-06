@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, Pagination, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import {
   NEWSLETTER_IMAGE_ASPECT_RATIO,
@@ -193,7 +194,7 @@ export default function NewslettersPage() {
                         <td>
                           {row.img_url ? (
                             <img
-                              src={row.img_url}
+                              src={getAdminImageUrl(row.img_url) ?? ''}
                               alt={row.header}
                               className="rounded border"
                               style={{

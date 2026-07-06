@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet, adminPost } from '@/lib/api';
+import { getStoredAdminUser, hasAdminPermission } from '@/lib/admin-auth';
 import { AlertStack, PageHeader, Pagination, StatusIcon, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import {
   customerCodeLabel,
@@ -94,12 +95,32 @@ export default function CustomerListPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [filters, setFilters] = useState(currentQuery);
   const [createForm, setCreateForm] = useState<CustomerFormState>(DEFAULT_CUSTOMER_FORM);
+  const [canRead, setCanRead] = useState(true);
+  const [canWrite, setCanWrite] = useState(false);
 
   useEffect(() => {
     setFilters(currentQuery);
   }, [searchKey]);
 
   useEffect(() => {
+    const storedUser = getStoredAdminUser();
+    const nextCanRead = hasAdminPermission(storedUser, 'customers.read');
+    const nextCanWrite = hasAdminPermission(storedUser, 'customers.write');
+
+    setCanRead(nextCanRead);
+    setCanWrite(nextCanWrite);
+
+    if (!nextCanRead) {
+      router.replace('/dashboard/forbidden');
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!canRead) {
+      setLoading(false);
+      return;
+    }
+
     const token = ensureAdminToken(router);
     if (!token) {
       return;
@@ -125,7 +146,7 @@ export default function CustomerListPage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [refreshKey, router, searchKey]);
+  }, [canRead, refreshKey, router, searchKey]);
 
   function updateRoute(next: {
     email?: string;
@@ -159,7 +180,7 @@ export default function CustomerListPage() {
   async function createCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const token = ensureAdminToken(router);
-    if (!token) {
+    if (!token || !canWrite) {
       return;
     }
 
@@ -183,7 +204,7 @@ export default function CustomerListPage() {
 
   async function deleteCustomer(row: CustomerRow) {
     const token = ensureAdminToken(router);
-    if (!token) {
+    if (!token || !canWrite) {
       return;
     }
 
@@ -246,13 +267,20 @@ export default function CustomerListPage() {
             </button>
           </div>
 
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
-            + Add User
-          </button>
+          {canWrite ? (
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
+              + Add User
+            </button>
+          ) : null}
         </div>
       </div>
 
       <AlertStack error={error} message={message} />
+      {!canWrite ? (
+        <div className="alert alert-info" role="alert">
+          You have read-only access to customers.
+        </div>
+      ) : null}
 
       <div className="row">
         <div className="col-sm-12">
@@ -331,8 +359,8 @@ export default function CustomerListPage() {
                     rows.map((row, index) => (
                       <tr key={row.id}>
                         <td>{(page - 1) * 20 + index + 1}</td>
-                        <td>{row.owner_name}</td>
-                        <td>{row.email}</td>
+                        <td>{row.owner_name.trim() || '—'}</td>
+                        <td>{row.email.trim() || '—'}</td>
                         <td>{customerCodeLabel(row.customer_code)}</td>
                         <td>
                           <StatusIcon active={row.status === 1} />
@@ -342,15 +370,17 @@ export default function CustomerListPage() {
                             <Link href={`/dashboard/web-users/${row.id}`} className="text-body">
                               <i className="fas fa-eye" />
                             </Link>
-                            <button
-                              type="button"
-                              className="btn btn-link p-0 text-danger"
-                              title="Delete user"
-                              disabled={deletingId === row.id}
-                              onClick={() => void deleteCustomer(row)}
-                            >
-                              <i className="fas fa-trash-alt" />
-                            </button>
+                            {canWrite ? (
+                              <button
+                                type="button"
+                                className="btn btn-link p-0 text-danger"
+                                title="Delete user"
+                                disabled={deletingId === row.id}
+                                onClick={() => void deleteCustomer(row)}
+                              >
+                                <i className="fas fa-trash-alt" />
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -370,7 +400,7 @@ export default function CustomerListPage() {
         </div>
       </div>
 
-      {showCreateModal ? (
+      {showCreateModal && canWrite ? (
         <>
           <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
             <div className="modal-dialog">

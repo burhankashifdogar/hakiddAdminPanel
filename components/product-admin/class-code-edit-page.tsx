@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminGet, adminPostForm } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken, formatValue } from './common';
 
 type ClassCodeDetail = {
@@ -19,7 +20,7 @@ function getImageUrl(detail: ClassCodeDetail | null) {
     return null;
   }
 
-  return detail.image_url || (String(detail.image).startsWith('http') ? detail.image : `https://hakidd.s3.amazonaws.com/${detail.image}`);
+  return getAdminImageUrl(detail.image_url || detail.image);
 }
 
 export default function ClassCodeEditPage({ id }: { id: number }) {

@@ -55,6 +55,48 @@ export default function GroupProductForm({
             onChange={(event) => updateField('description', event.target.value)}
           />
         </div>
+        <div className="row g-3 mb-3">
+          <div className="col-lg-6">
+            <label className="form-label">English Title</label>
+            <input
+              type="text"
+              className="form-control"
+              value={values.title_en}
+              placeholder="Enter English group title"
+              onChange={(event) => updateField('title_en', event.target.value)}
+            />
+          </div>
+          <div className="col-lg-6">
+            <label className="form-label">Spanish Title</label>
+            <input
+              type="text"
+              className="form-control"
+              value={values.title_es}
+              placeholder="Enter Spanish group title"
+              onChange={(event) => updateField('title_es', event.target.value)}
+            />
+          </div>
+          <div className="col-lg-6">
+            <label className="form-label">English Description</label>
+            <textarea
+              className="form-control"
+              rows={3}
+              value={values.description_en}
+              placeholder="Enter English group description"
+              onChange={(event) => updateField('description_en', event.target.value)}
+            />
+          </div>
+          <div className="col-lg-6">
+            <label className="form-label">Spanish Description</label>
+            <textarea
+              className="form-control"
+              rows={3}
+              value={values.description_es}
+              placeholder="Enter Spanish group description"
+              onChange={(event) => updateField('description_es', event.target.value)}
+            />
+          </div>
+        </div>
         {showExternal ? (
           <div className="mb-3">
             <label className="form-label">External</label>

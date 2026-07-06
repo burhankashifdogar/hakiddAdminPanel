@@ -11,6 +11,10 @@ body {
   font-family: 'Public Sans', sans-serif;
 }
 
+body {
+  overflow-x: hidden;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -18,6 +22,135 @@ a {
 
 button {
   cursor: pointer;
+}
+
+.pc-sidebar .navbar-wrapper {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pc-sidebar .m-header,
+.pc-sidebar .card.pc-user-card {
+  flex: 0 0 auto;
+}
+
+.pc-sidebar .navbar-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.pc-sidebar .navbar-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pc-sidebar .navbar-content::-webkit-scrollbar-thumb {
+  background: rgba(57, 70, 95, 0.28);
+  border-radius: 999px;
+}
+
+.pc-sidebar .pc-link {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.pc-header .pc-head-link.btn {
+  color: inherit;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.pc-header .pc-head-link.btn:focus,
+.pc-header .pc-head-link.btn:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+.admin-brand-image {
+  display: block;
+  height: auto;
+  object-fit: contain;
+}
+
+.admin-brand-image-full {
+  width: 132px;
+  max-width: 100%;
+}
+
+.admin-brand-image-icon {
+  width: 38px;
+  height: 38px;
+}
+
+@media (min-width: 1025px) {
+  .pc-sidebar.pc-sidebar-icon-only {
+    width: 84px !important;
+    overflow: visible;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .navbar-wrapper {
+    width: 84px !important;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .m-header {
+    justify-content: center;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .b-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .navbar-content {
+    padding-top: 12px;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .pc-caption,
+  .pc-sidebar.pc-sidebar-icon-only .pc-mtext,
+  .pc-sidebar.pc-sidebar-icon-only .pc-arrow,
+  .pc-sidebar.pc-sidebar-icon-only .pc-submenu,
+  .pc-sidebar.pc-sidebar-icon-only .pc-user-card {
+    display: none !important;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .pc-navbar > .pc-item {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .pc-link {
+    padding-left: 0;
+    padding-right: 0;
+    text-align: center;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .pc-micon {
+    margin-right: 0;
+  }
+
+  .pc-sidebar.pc-sidebar-icon-only .pc-link::after {
+    left: 6px;
+    right: 6px;
+  }
+
+  .pc-header.pc-header-icon-only {
+    left: 84px !important;
+  }
+
+  .pc-container.pc-container-icon-only,
+  .pc-footer.pc-footer-icon-only {
+    margin-left: 84px !important;
+  }
 }
 
 .pc-content {

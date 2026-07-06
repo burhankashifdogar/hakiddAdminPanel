@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminGet, adminPostForm } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import {
   EMPTY_NEWSLETTER_FORM,
@@ -134,7 +135,7 @@ export default function NewsletterFormPage({ mode }: { mode: 'create' | 'edit' }
   }
 
   const pageTitle = mode === 'create' ? 'Add Newsletter' : 'Edit Newsletter';
-  const previewImage = selectedImageUrl || currentImageUrl;
+  const previewImage = getAdminImageUrl(selectedImageUrl || currentImageUrl);
 
   return (
     <div className="pc-content">
@@ -253,7 +254,7 @@ export default function NewsletterFormPage({ mode }: { mode: 'create' | 'edit' }
             <div className="border rounded-3 overflow-hidden bg-light mb-3">
               {previewImage ? (
                 <img
-                  src={previewImage}
+                  src={previewImage ?? ''}
                   alt={form.header || 'Newsletter preview'}
                   className="w-100"
                   style={{ aspectRatio: NEWSLETTER_IMAGE_ASPECT_RATIO, objectFit: 'cover' }}
