@@ -44,11 +44,7 @@ jobs:
           script: |
             set -e
             cd "$APP_DIR"
+            # bootstrap the latest deploy.sh, then hand off the deploy to it
             git fetch origin dev
             git reset --hard origin/dev
-            git clean -fd            # leaves .gitignored .env / node_modules intact
-            npm ci
-            npm run build            # next build
-            # Assumes the pm2 process already exists (first-time: `pm2 start`).
-            # If pm2 isn't on PATH for the SSH shell, use its absolute path.
-            pm2 restart "$PM2_APP" --update-env
+            bash deploy.sh
