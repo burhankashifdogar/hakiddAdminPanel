@@ -6,11 +6,11 @@
 # Run once as the deploy user (needs sudo for the /var/www dir):
 #   bash server-setup.sh
 # Override defaults with env vars if needed:
-#   APP_DIR=/var/www/hakidd-admin-panel PM2_APP=hakidd-admin bash server-setup.sh
+#   APP_DIR=/var/www/html/hakiddAdmin PM2_APP=hakidd-admin bash server-setup.sh
 #
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/var/www/hakidd-admin-panel}"
+APP_DIR="${APP_DIR:-/var/www/html/hakiddAdmin}"
 REPO_URL="${REPO_URL:-git@github.com:burhankashifdogar/hakiddAdminPanel.git}"
 PM2_APP="${PM2_APP:-hakidd-admin}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-dev}"

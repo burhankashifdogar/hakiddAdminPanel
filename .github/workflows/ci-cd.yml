@@ -9,7 +9,7 @@ on:
 
 env:
   # --- EDIT these two to match the EC2 box ---
-  APP_DIR: /var/www/hakidd-admin-panel
+  APP_DIR: /var/www/html/hakiddAdmin
   PM2_APP: hakidd-admin
 
 jobs:
