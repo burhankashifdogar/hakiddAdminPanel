@@ -3,14 +3,14 @@
 # Deploy the Hakidd admin-panel (Next.js) on the EC2 box.
 #
 # Run automatically by .github/workflows/ci-cd.yml, or manually on the server:
-#   cd /var/www/hakidd-admin-panel && bash deploy.sh
+#   cd /var/www/html/hakiddAdmin && bash deploy.sh
 #
 # Override defaults with env vars, e.g.:
-#   APP_DIR=/var/www/hakidd-admin-panel PM2_APP=hakidd-admin bash deploy.sh
+#   APP_DIR=/var/www/html/hakiddAdmin PM2_APP=hakidd-admin bash deploy.sh
 #
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/var/www/hakidd-admin-panel}"
+APP_DIR="${APP_DIR:-/var/www/html/hakiddAdmin}"
 PM2_APP="${PM2_APP:-hakidd-admin}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-dev}"
 
