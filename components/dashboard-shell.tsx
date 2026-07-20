@@ -320,12 +320,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
       </header>
 
-      <div className={`pc-container ${desktopSidebarHidden ? 'pc-container-icon-only' : ''}`}>
-        <div className="d-flex align-items-start">
-          <div className="flex-grow-1 min-w-0">{children}</div>
-          <AuditLogSidebar />
-        </div>
-      </div>
+      <div className={`pc-container ${desktopSidebarHidden ? 'pc-container-icon-only' : ''}`}>{children}</div>
+      <AuditLogSidebar />
 
       <footer className={`pc-footer ${desktopSidebarHidden ? 'pc-footer-icon-only' : ''}`}>
         <div className="footer-wrapper container-fluid">
