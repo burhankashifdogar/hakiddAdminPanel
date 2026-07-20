@@ -12,6 +12,7 @@ import {
   hasAdminPermission,
 } from '@/lib/admin-auth';
 import { getRequiredAdminImageUrl } from '@/lib/assets';
+import AuditLogSidebar from '@/components/audit-log-sidebar';
 
 const SIDEBAR_STATE_STORAGE_KEY = 'hakidd-admin-sidebar-collapsed';
 
@@ -319,7 +320,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
       </header>
 
-      <div className={`pc-container ${desktopSidebarHidden ? 'pc-container-icon-only' : ''}`}>{children}</div>
+      <div className={`pc-container ${desktopSidebarHidden ? 'pc-container-icon-only' : ''}`}>
+        <div className="d-flex align-items-start">
+          <div className="flex-grow-1 min-w-0">{children}</div>
+          <AuditLogSidebar />
+        </div>
+      </div>
 
       <footer className={`pc-footer ${desktopSidebarHidden ? 'pc-footer-icon-only' : ''}`}>
         <div className="footer-wrapper container-fluid">
