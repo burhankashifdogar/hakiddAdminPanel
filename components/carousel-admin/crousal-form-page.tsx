@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminGet, adminPostForm } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { type CrousalRow, EMPTY_CROUSAL_FORM, mapCrousalToForm } from './shared';
 
@@ -186,9 +187,9 @@ export default function CrousalFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const pageTitle = mode === 'create' ? 'Add Carousel' : 'Edit Carousel';
   const previewHeading = form.header.trim() || 'Heading preview';
   const previewSubHeading = form.text.trim() || 'Sub heading preview';
-  const previewDesktopImage = mainPreviewUrl || currentMainImageUrl;
-  const previewMobileImage = mobilePreviewUrl || currentMobileImageUrl;
-  const previewTabImage = tabPreviewUrl || currentTabImageUrl;
+  const previewDesktopImage = getAdminImageUrl(mainPreviewUrl || currentMainImageUrl);
+  const previewMobileImage = getAdminImageUrl(mobilePreviewUrl || currentMobileImageUrl);
+  const previewTabImage = getAdminImageUrl(tabPreviewUrl || currentTabImageUrl);
 
   return (
     <div className="pc-content">
@@ -404,7 +405,7 @@ export default function CrousalFormPage({ mode }: { mode: 'create' | 'edit' }) {
                       <div className="small text-uppercase text-muted mb-1">Desktop</div>
                       <div className="border rounded overflow-hidden bg-light mb-3">
                         {previewDesktopImage ? (
-                          <img src={previewDesktopImage} alt={previewHeading} className="w-100" style={{ objectFit: 'cover' }} />
+                          <img src={previewDesktopImage ?? ''} alt={previewHeading} className="w-100" style={{ objectFit: 'cover' }} />
                         ) : (
                           <div className="py-5 text-center text-muted">Desktop image preview</div>
                         )}
@@ -413,7 +414,7 @@ export default function CrousalFormPage({ mode }: { mode: 'create' | 'edit' }) {
                       <div className="small text-uppercase text-muted mb-1">Tablet</div>
                       <div className="border rounded overflow-hidden bg-light mb-3">
                         {previewTabImage ? (
-                          <img src={previewTabImage} alt={`${previewHeading} tablet`} className="w-100" style={{ objectFit: 'cover' }} />
+                          <img src={previewTabImage ?? ''} alt={`${previewHeading} tablet`} className="w-100" style={{ objectFit: 'cover' }} />
                         ) : (
                           <div className="py-5 text-center text-muted">Tablet image preview</div>
                         )}
@@ -423,7 +424,7 @@ export default function CrousalFormPage({ mode }: { mode: 'create' | 'edit' }) {
                       <div className="border rounded overflow-hidden bg-light">
                         {previewMobileImage ? (
                           <img
-                            src={previewMobileImage}
+                            src={previewMobileImage ?? ''}
                             alt={`${previewHeading} mobile`}
                             className="w-100"
                             style={{ objectFit: 'cover' }}

@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { getRequiredAdminImageUrl } from '@/lib/assets';
 
 export const metadata: Metadata = {
   title: 'Hakidd Admin',
@@ -14,8 +15,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="author" content="phoenixcoded" />
-        <link rel="icon" href="/assets/images/logo.png" type="image/x-icon" />
+        <meta name="author" content="H. A. Kidd and Company Limited" />
+        <link rel="icon" href={getRequiredAdminImageUrl('/assets/images/hakidd-mark.png')} type="image/png" />
         <link rel="stylesheet" href="/assets/css/plugins/flatpickr.min.css" />
         <link rel="stylesheet" href="/assets/css/plugins/jsvectormap.min.css" />
         <link
@@ -43,9 +44,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script src="/assets/js/fonts/custom-font.js" strategy="afterInteractive" />
         <Script src="/assets/js/pcoded.js" strategy="afterInteractive" />
         <Script src="/assets/js/plugins/feather.min.js" strategy="afterInteractive" />
-        <Script src="/assets/js/plugins/jsvectormap.min.js" strategy="afterInteractive" />
-        <Script src="/assets/js/plugins/world.js" strategy="afterInteractive" />
-        <Script src="/assets/js/plugins/world-merc.js" strategy="afterInteractive" />
+        {/* jsvectormap + world map data are only used on the dashboard; they are
+            loaded there (see app/dashboard/page.tsx) instead of on every page. */}
         <Script id="hakidd-theme-init" strategy="afterInteractive">
           {`
             if (typeof window !== 'undefined') {

@@ -6,8 +6,18 @@ import type { ApexOptions } from 'apexcharts';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { adminDownload, adminGet, adminPost } from '@/lib/api';
+import { getStoredAdminToken } from '@/lib/admin-auth';
+import {
+  formatOrderDate,
+  orderStatusActive,
+  splitCsvField,
+  sumPriceList,
+  type GroupedOrderRow,
+  type OrderHistoryResponse,
+} from '@/components/order-admin/shared';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), { ssr: false });
+const DashboardCountryMap = dynamic(() => import('@/components/dashboard-country-map'), { ssr: false });
 
 type StoredEvent = {
   city: string | null;
@@ -33,6 +43,26 @@ type ClickRow = {
   unique_users: number;
 };
 
+type UserJourneyEvent = {
+  city: string | null;
+  country: string | null;
+  device_category: string | null;
+  event_date: string;
+  event_id: number;
+  event_name: string;
+  event_params: Record<string, string | number | null>;
+  event_timestamp: string | number | null;
+  page_location: string | null;
+};
+
+type UserJourneyResponse = {
+  customer_code: string | null;
+  events: UserJourneyEvent[];
+  total_events: number;
+  user_id: string | null;
+  user_pseudo_id: string | null;
+};
+
 type AnalyticsPayload = {
   activeCartsCount: number;
   avgItemsPerCart: number;
@@ -42,7 +72,7 @@ type AnalyticsPayload = {
     track_category: number;
     unique_users: number;
   };
-  cartsByCountry: Record<string, number>;
+  cartsByCountry: Array<{ code: string | null; name: string; total: number }>;
   categoryClickBreakdown: ClickRow[];
   days: number;
   monthlyLabels: string[];
@@ -170,6 +200,39 @@ async function loadAnalyticsDashboard(days: string, token: string, attempts = 2,
   }
 
   throw lastError instanceof Error ? lastError : new Error('Failed to load analytics');
+}
+
+async function loadRecentOrders(token: string) {
+  const response = (await adminGet('/admin-api/orders/history?per_page=10', token)) as OrderHistoryResponse;
+  return response.mode === 'grouped' ? (response.data as GroupedOrderRow[]) : [];
+}
+
+async function loadUserJourney(identifier: string, token: string) {
+  const params = new URLSearchParams();
+  if (/^\d+$/.test(identifier.trim())) {
+    params.set('user_id', identifier.trim());
+  } else {
+    params.set('user_pseudo_id', identifier.trim());
+  }
+
+  return (await adminGet(`/admin-api/analytics/user-journey?${params.toString()}`, token)) as UserJourneyResponse;
+}
+
+function formatJourneyTimestamp(value: string | number | null) {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return String(value);
+  }
+
+  const timestamp = numeric > 1000000000000 ? Math.floor(numeric / 1000) : numeric;
+  return new Date(timestamp).toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 
 function limitText(value: string, maxLength: number) {
@@ -385,11 +448,18 @@ export default function DashboardAnalytics() {
   const [filtering, setFiltering] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
+  const [recentOrders, setRecentOrders] = useState<GroupedOrderRow[]>([]);
+  const [recentOrdersError, setRecentOrdersError] = useState('');
+  const [recentOrdersLoading, setRecentOrdersLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedDevice, setSelectedDevice] = useState('');
   const [selectedEventType, setSelectedEventType] = useState('');
+  const [journeyIdentifierInput, setJourneyIdentifierInput] = useState('');
+  const [journeyResult, setJourneyResult] = useState<UserJourneyResponse | null>(null);
+  const [journeyError, setJourneyError] = useState('');
+  const [journeyLoading, setJourneyLoading] = useState(false);
   const [sortState, setSortState] = useState<SortState>({
     column: 'timestamp',
     direction: 'desc',
@@ -462,7 +532,7 @@ export default function DashboardAnalytics() {
 
   useEffect(() => {
     let cancelled = false;
-    const token = localStorage.getItem('hakidd_admin_token');
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return;
@@ -493,6 +563,38 @@ export default function DashboardAnalytics() {
     };
   }, [days]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const token = getStoredAdminToken();
+    if (!token) {
+      return;
+    }
+
+    setRecentOrdersLoading(true);
+    setRecentOrdersError('');
+
+    loadRecentOrders(token)
+      .then((rows) => {
+        if (!cancelled) {
+          setRecentOrders(rows);
+        }
+      })
+      .catch((requestError) => {
+        if (!cancelled) {
+          setRecentOrdersError(requestError instanceof Error ? requestError.message : 'Failed to load recent orders');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setRecentOrdersLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleDaysChange = (nextDays: string) => {
     setExportRange({ endDate: '', startDate: '' });
     flatpickrRef.current?.setDate(getDefaultRange(nextDays).map((date) => isoDate(date)), false);
@@ -507,8 +609,33 @@ export default function DashboardAnalytics() {
     setExportRange({ endDate: '', startDate: '' });
   };
 
+  const handleJourneyLookup = async () => {
+    const identifier = journeyIdentifierInput.trim();
+    if (!identifier) {
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      return;
+    }
+
+    setJourneyLoading(true);
+    setJourneyError('');
+    setJourneyResult(null);
+
+    try {
+      const result = await loadUserJourney(identifier, token);
+      setJourneyResult(result);
+    } catch (lookupError) {
+      setJourneyError(lookupError instanceof Error ? lookupError.message : 'Failed to load user journey');
+    } finally {
+      setJourneyLoading(false);
+    }
+  };
+
   const getToken = () => {
-    const token = localStorage.getItem('hakidd_admin_token');
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return null;
@@ -1124,6 +1251,32 @@ export default function DashboardAnalytics() {
             </div>
 
             <div className="row g-4 mb-5">
+              <div className="col-12">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-fire text-danger me-2" />
+                      <div>
+                        <h5 className="mb-0 fw-semibold">Heatmaps &amp; Session Recordings</h5>
+                        <p className="text-muted small mb-0">
+                          View click heatmaps and session replays in Lucky Orange (opens in a new tab).
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="https://app.luckyorange.com"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-outline-danger"
+                    >
+                      Open Heatmaps
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="row g-4 mb-5">
               <div className="col-lg-4">
                 <div className="card border-0 shadow-sm h-100">
                   <div className="card-header bg-white border-0 pb-0">
@@ -1179,7 +1332,7 @@ export default function DashboardAnalytics() {
                     <p className="text-muted small mb-0">Geographic distribution of cart items</p>
                   </div>
                   <div className="card-body">
-                    <div className="table-responsive">
+                    <div className="table-responsive" style={{ maxHeight: 320, overflowY: 'auto' }}>
                       <table className="table table-hover align-middle">
                         <thead className="table-light">
                           <tr>
@@ -1188,14 +1341,14 @@ export default function DashboardAnalytics() {
                           </tr>
                         </thead>
                         <tbody>
-                          {Object.entries(dashboard.cartsByCountry).length > 0 ? (
-                            Object.entries(dashboard.cartsByCountry).map(([country, count]) => (
-                              <tr key={country}>
+                          {dashboard.cartsByCountry.length > 0 ? (
+                            dashboard.cartsByCountry.map((entry) => (
+                              <tr key={entry.code ?? entry.name}>
                                 <td className="border-0">
-                                  <span className="fw-medium">{country}</span>
+                                  <span className="fw-medium">{entry.name}</span>
                                 </td>
                                 <td className="border-0 text-end">
-                                  <span className="badge bg-success bg-opacity-10 text-success fw-medium">{count}</span>
+                                  <span className="badge bg-success bg-opacity-10 text-success fw-medium">{entry.total}</span>
                                 </td>
                               </tr>
                             ))
@@ -1256,6 +1409,200 @@ export default function DashboardAnalytics() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="row g-4 mb-5">
+              <div className="col-12">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-header bg-white border-0 pb-0">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-map text-success me-2" />
+                      <h5 className="mb-0 fw-semibold">Carts by Country (Map)</h5>
+                    </div>
+                    <p className="text-muted small mb-0">All countries with cart activity, shaded by volume</p>
+                  </div>
+                  <div className="card-body">
+                    <DashboardCountryMap entries={dashboard.cartsByCountry} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="row g-4 mb-5">
+              <div className="col-12">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-receipt text-primary me-2" />
+                      <h5 className="mb-0 fw-semibold">Recent Orders</h5>
+                    </div>
+                    <Link href="/dashboard/orders" className="btn btn-sm btn-outline-primary">
+                      View all orders
+                    </Link>
+                  </div>
+                  <div className="card-body">
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle">
+                        <thead className="table-light">
+                          <tr>
+                            <th className="border-0 fw-semibold">Order ID</th>
+                            <th className="border-0 fw-semibold">Customer</th>
+                            <th className="border-0 fw-semibold">Product(s)</th>
+                            <th className="border-0 fw-semibold text-end">Qty</th>
+                            <th className="border-0 fw-semibold text-end">Total</th>
+                            <th className="border-0 fw-semibold">Status</th>
+                            <th className="border-0 fw-semibold">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentOrdersLoading ? (
+                            <tr>
+                              <td colSpan={7} className="text-center text-muted py-4">
+                                Loading recent orders...
+                              </td>
+                            </tr>
+                          ) : recentOrdersError ? (
+                            <tr>
+                              <td colSpan={7} className="text-center text-danger py-4">
+                                {recentOrdersError}
+                              </td>
+                            </tr>
+                          ) : recentOrders.length > 0 ? (
+                            recentOrders.map((order) => {
+                              const productNames = (order.items ?? []).map((item) => item.product_name);
+                              const productLabel =
+                                productNames.length > 0
+                                  ? limitText(productNames.join(', '), 40)
+                                  : limitText(order.product_ids ?? '-', 40);
+                              const totalQty = splitCsvField(order.quantities).reduce(
+                                (sum, value) => sum + (Number(value) || 0),
+                                0,
+                              );
+                              const orderTotal =
+                                (order.items ?? []).reduce((sum, item) => sum + (item.line_total ?? 0), 0) ||
+                                sumPriceList(order.prices);
+
+                              return (
+                                <tr key={order.order_id}>
+                                  <td className="border-0">#{order.order_id}</td>
+                                  <td className="border-0">{order.account_number || '-'}</td>
+                                  <td className="border-0">{productLabel}</td>
+                                  <td className="border-0 text-end">{totalQty}</td>
+                                  <td className="border-0 text-end">${orderTotal.toFixed(2)}</td>
+                                  <td className="border-0">
+                                    <span
+                                      className={`badge ${
+                                        orderStatusActive(order.status) ? 'bg-success' : 'bg-secondary'
+                                      } bg-opacity-10 text-${orderStatusActive(order.status) ? 'success' : 'secondary'}`}
+                                    >
+                                      {orderStatusActive(order.status) ? 'Active' : 'Inactive'}
+                                    </span>
+                                  </td>
+                                  <td className="border-0">{formatOrderDate(order.date)}</td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={7} className="text-center text-muted py-4">
+                                <i className="fas fa-receipt fs-1 text-muted mb-2 d-block" />
+                                No recent orders
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="row g-4 mb-5">
+              <div className="col-12">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-header bg-white border-0 pb-0">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-route text-info me-2" />
+                      <h5 className="mb-0 fw-semibold">User Journey Lookup</h5>
+                    </div>
+                    <p className="text-muted small mb-0">
+                      Look up a chronological event timeline for a customer code / user id, or a GA4 user_pseudo_id
+                    </p>
+                  </div>
+                  <div className="card-body">
+                    <div className="d-flex gap-2 mb-3 flex-wrap">
+                      <input
+                        type="text"
+                        className="form-control"
+                        style={{ maxWidth: 320 }}
+                        placeholder="Customer code or user_pseudo_id"
+                        value={journeyIdentifierInput}
+                        onChange={(event) => setJourneyIdentifierInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            void handleJourneyLookup();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={journeyLoading || !journeyIdentifierInput.trim()}
+                        onClick={() => void handleJourneyLookup()}
+                      >
+                        {journeyLoading ? 'Searching...' : 'Search'}
+                      </button>
+                    </div>
+
+                    {journeyError ? (
+                      <div className="alert alert-danger py-2 mb-3">{journeyError}</div>
+                    ) : null}
+
+                    {journeyResult ? (
+                      journeyResult.events.length > 0 ? (
+                        <>
+                          <p className="text-muted small mb-3">
+                            {journeyResult.total_events} event(s)
+                            {journeyResult.customer_code ? ` — customer: ${journeyResult.customer_code}` : ''}
+                          </p>
+                          <ul className="list-group list-group-flush">
+                            {journeyResult.events.map((event) => (
+                              <li key={event.event_id} className="list-group-item px-0">
+                                <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                  <div>
+                                    <span className="fw-semibold">{event.event_name}</span>
+                                    {event.page_location ? (
+                                      <span className="text-muted small ms-2">{limitText(event.page_location, 60)}</span>
+                                    ) : null}
+                                  </div>
+                                  <div className="text-muted small text-end">
+                                    <div>{formatJourneyTimestamp(event.event_timestamp)}</div>
+                                    <div>
+                                      {event.device_category || 'Unknown device'}
+                                      {event.city || event.country
+                                        ? ` · ${event.city ?? 'Unknown'}, ${event.country ?? 'Unknown'}`
+                                        : ''}
+                                    </div>
+                                  </div>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <p className="text-muted mb-0">No events found for this identifier.</p>
+                      )
+                    ) : (
+                      !journeyLoading && (
+                        <p className="text-muted mb-0">
+                          Enter an identifier and click Search to view a session timeline.
+                        </p>
+                      )
+                    )}
                   </div>
                 </div>
               </div>

@@ -3,6 +3,8 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminLogin } from '@/lib/api';
+import { storeAdminSession } from '@/lib/admin-auth';
+import { getRequiredAdminImageUrl } from '@/lib/assets';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,8 +20,10 @@ export default function LoginPage() {
 
     try {
       const payload = await adminLogin(email.trim(), password);
-      localStorage.setItem('hakidd_admin_token', payload.token);
-      localStorage.setItem('hakidd_admin_user', JSON.stringify(payload.user));
+      if (!payload?.token || !payload?.user) {
+        throw new Error('Login failed: unexpected response from server');
+      }
+      storeAdminSession(payload.token, payload.user);
       router.replace('/dashboard');
       router.refresh();
     } catch (err) {
@@ -36,7 +40,11 @@ export default function LoginPage() {
           <div className="card my-5">
             <div className="card-body">
               <div className="text-center">
-                <img src="/assets/images/authentication/img-auth-login.png" alt="images" className="img-fluid mb-3" />
+                <img
+                  src={getRequiredAdminImageUrl('/assets/images/authentication/img-auth-login.png')}
+                  alt="images"
+                  className="img-fluid mb-3"
+                />
                 <h4 className="f-w-500 mb-1">Login with your email</h4>
               </div>
               <form onSubmit={onSubmit}>

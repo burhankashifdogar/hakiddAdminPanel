@@ -4,6 +4,7 @@ import { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { adminDelete, adminGet, adminPostFormWithProgress } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import {
   AlertStack,
   Breadcrumb,
@@ -378,12 +379,17 @@ export default function ProductDetailPage({ productId }: { productId: string }) 
             <div className="row g-3 align-items-start">
               <div className="col-xl-3 col-md-4 col-sm-6">
                 <div className="border rounded-3 p-3 bg-light-subtle">
-                  <a className="card-gallery d-block" href={detail.thumbnail.url} target="_blank" rel="noreferrer">
-                    <img className="img-fluid rounded border" src={detail.thumbnail.url} alt="Thumbnail" />
+                  <a className="card-gallery d-block" href={getAdminImageUrl(detail.thumbnail.url) ?? ''} target="_blank" rel="noreferrer">
+                    <img className="img-fluid rounded border" src={getAdminImageUrl(detail.thumbnail.url) ?? ''} alt="Thumbnail" />
                   </a>
                   <div className="mt-3 small text-muted text-break">{detail.thumbnail.image}</div>
                   <div className="d-flex gap-2 mt-3">
-                    <a href={detail.thumbnail.url} target="_blank" rel="noreferrer" className="btn btn-outline-secondary btn-sm">
+                    <a
+                      href={getAdminImageUrl(detail.thumbnail.url) ?? ''}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-outline-secondary btn-sm"
+                    >
                       Open
                     </a>
                     <button
@@ -423,12 +429,17 @@ export default function ProductDetailPage({ productId }: { productId: string }) 
               {detail.images.map((image) => (
                 <div key={image.image} className="col-xl-3 col-md-4 col-sm-6">
                   <div className="border rounded-3 p-3 h-100 bg-light-subtle">
-                    <a className="card-gallery d-block" href={image.url} target="_blank" rel="noreferrer">
-                      <img className="img-fluid rounded border" src={image.url} alt={image.image} />
+                    <a className="card-gallery d-block" href={getAdminImageUrl(image.url) ?? ''} target="_blank" rel="noreferrer">
+                      <img className="img-fluid rounded border" src={getAdminImageUrl(image.url) ?? ''} alt={image.image} />
                     </a>
                     <div className="mt-3 text-break small text-muted">{image.image}</div>
                     <div className="d-flex gap-2 mt-3">
-                      <a href={image.url} target="_blank" rel="noreferrer" className="btn btn-outline-secondary btn-sm">
+                      <a
+                        href={getAdminImageUrl(image.url) ?? ''}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-outline-secondary btn-sm"
+                      >
                         Open
                       </a>
                       <button

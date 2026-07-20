@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet, adminPost } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import {
   CATALOGUE_LANGUAGE_OPTIONS,
@@ -237,7 +238,7 @@ export default function CataloguesPage() {
                         <td>
                           {row.image_url ? (
                             <img
-                              src={row.image_url}
+                              src={getAdminImageUrl(row.image_url) ?? ''}
                               alt={row.display_name}
                               className="user-avtar rounded wid-50 hie-50"
                               style={{ objectFit: 'cover' }}

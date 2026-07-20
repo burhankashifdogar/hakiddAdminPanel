@@ -1,27 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { adminGet } from '@/lib/api';
-
-type AdminUser = {
-  id: number;
-  name: string;
-  email: string;
-};
+import { AdminSessionUser, getStoredAdminToken, getStoredAdminUser, hasAdminPermission } from '@/lib/admin-auth';
 
 export default function SiteSettingsPage() {
-  const [user, setUser] = useState<AdminUser | null>(null);
+  const [user, setUser] = useState<AdminSessionUser | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('hakidd_admin_token');
+    const storedUser = getStoredAdminUser();
+    if (!hasAdminPermission(storedUser, 'site_settings.read')) {
+      window.location.href = '/dashboard/forbidden';
+      return;
+    }
+
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return;
     }
 
     adminGet('/admin-api/me', token)
-      .then((payload: AdminUser) => setUser(payload))
+      .then((payload) => setUser(((payload as { user?: AdminSessionUser }).user ?? payload) as AdminSessionUser))
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load profile'));
   }, []);
 
@@ -33,7 +35,7 @@ export default function SiteSettingsPage() {
             <div className="col-md-12">
               <ul className="breadcrumb">
                 <li className="breadcrumb-item">
-                  <a href="/dashboard">Home</a>
+                  <Link href="/dashboard">Home</Link>
                 </li>
                 <li className="breadcrumb-item" aria-current="page">
                   Site Settings

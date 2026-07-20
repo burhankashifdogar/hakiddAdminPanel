@@ -18,17 +18,19 @@ function buildApiUrl(path: string) {
   return `${base}/${normalizedPath}`;
 }
 
-function getErrorMessage(payload: any, fallback: string) {
-  if (Array.isArray(payload?.message)) {
-    return payload.message.join(', ');
+function getErrorMessage(payload: unknown, fallback: string) {
+  const record = payload as Record<string, unknown> | null | undefined;
+
+  if (Array.isArray(record?.message)) {
+    return record.message.join(', ');
   }
 
-  if (typeof payload?.message === 'string' && payload.message.trim() !== '') {
-    return payload.message;
+  if (typeof record?.message === 'string' && record.message.trim() !== '') {
+    return record.message;
   }
 
-  if (typeof payload?.error === 'string' && payload.error.trim() !== '') {
-    return payload.error;
+  if (typeof record?.error === 'string' && record.error.trim() !== '') {
+    return record.error;
   }
 
   return fallback;
@@ -190,7 +192,7 @@ export function adminPostFormWithProgress(
   body: FormData,
   onProgress: (percent: number) => void,
 ) {
-  return new Promise<any>((resolve, reject) => {
+  return new Promise<unknown>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('POST', buildApiUrl(path), true);
     request.setRequestHeader('authorization', `Bearer ${token}`);
@@ -203,7 +205,7 @@ export function adminPostFormWithProgress(
 
     request.onload = () => {
       const text = request.responseText ?? '';
-      let payload: any = {};
+      let payload: unknown = {};
 
       if (text) {
         try {

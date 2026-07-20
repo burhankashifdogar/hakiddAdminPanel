@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminGet, adminPostForm } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { EMPTY_PATTERN_FORM, type PatternRow, getFileNameFromPath, mapPatternToForm } from './shared';
 
@@ -141,7 +142,7 @@ export default function PatternFormPage({ mode }: { mode: 'create' | 'edit' }) {
   }
 
   const pageTitle = mode === 'create' ? 'Add Patterns' : 'Edit Patterns';
-  const previewImage = selectedImageUrl || currentImageUrl;
+  const previewImage = getAdminImageUrl(selectedImageUrl || currentImageUrl);
   const previewFileName = selectedPdfFile?.name || currentFileName || 'No PDF selected yet';
 
   return (
@@ -262,7 +263,7 @@ export default function PatternFormPage({ mode }: { mode: 'create' | 'edit' }) {
             <div className="border rounded-3 overflow-hidden bg-light mb-3">
               {previewImage ? (
                 <img
-                  src={previewImage}
+                  src={previewImage ?? ''}
                   alt={form.name || 'Pattern preview'}
                   className="w-100"
                   style={{ aspectRatio: '1 / 1', objectFit: 'cover' }}

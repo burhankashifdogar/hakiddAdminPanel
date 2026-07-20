@@ -1,6 +1,38 @@
+# Dependencies
 node_modules/
-.next/
-.env.local
-.DS_Store
-graphify-out
+.pnp
+.pnp.js
 
+# Build output
+.next/
+.next-dev/
+out/
+build/
+
+# Environment (keep *.example templates tracked)
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Vercel / TS build info
+.vercel
+*.tsbuildinfo
+
+# graphify generated output
+graphify-out/

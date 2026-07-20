@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { adminDelete, adminGet } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { type DisplayListPayload, type DisplayRow } from './shared';
 
@@ -129,7 +130,7 @@ export default function DisplaysPage() {
                         <td>
                           {row.image_url ? (
                             <img
-                              src={row.image_url}
+                              src={getAdminImageUrl(row.image_url) ?? ''}
                               alt={row.heading}
                               className="user-avtar rounded wid-80 hie-80"
                               style={{ objectFit: 'cover' }}

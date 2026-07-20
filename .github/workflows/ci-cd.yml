@@ -1,0 +1,50 @@
+name: CI / CD
+
+# CI runs on every PR into dev; CD deploys to the shared EC2 box on merge/push to dev.
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+
+env:
+  # --- EDIT these two to match the EC2 box ---
+  APP_DIR: /var/www/html/hakiddAdmin
+  PM2_APP: hakidd-admin
+
+jobs:
+  ci:
+    name: Lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # NOTE: `next build` needs any required NEXT_PUBLIC_* / server env at build
+      # time. Add them here as `env:` or repo secrets if the build depends on them.
+      - run: npm run build
+
+  deploy:
+    name: Deploy to EC2 (dev)
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: APP_DIR,PM2_APP
+          script: |
+            set -e
+            cd "$APP_DIR"
+            # bootstrap the latest deploy.sh, then hand off the deploy to it
+            git fetch origin dev
+            git reset --hard origin/dev
+            bash deploy.sh

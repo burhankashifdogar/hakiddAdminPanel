@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminDelete, adminGet, adminPost, adminPut } from '@/lib/api';
+import { getStoredAdminUser, hasAdminPermission } from '@/lib/admin-auth';
+import { getRequiredAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 import { currencyLabel, CustomerDetailResponse, CustomerFormState, CustomerRow, customerFormFromRow, statusLabel } from './shared';
 
@@ -28,8 +30,28 @@ export default function CustomerProfilePage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [canRead, setCanRead] = useState(true);
+  const [canWrite, setCanWrite] = useState(false);
 
   useEffect(() => {
+    const storedUser = getStoredAdminUser();
+    const nextCanRead = hasAdminPermission(storedUser, 'customers.read');
+    const nextCanWrite = hasAdminPermission(storedUser, 'customers.write');
+
+    setCanRead(nextCanRead);
+    setCanWrite(nextCanWrite);
+
+    if (!nextCanRead) {
+      router.replace('/dashboard/forbidden');
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (!canRead) {
+      setLoading(false);
+      return;
+    }
+
     const token = ensureAdminToken(router);
     if (!token) {
       return;
@@ -56,12 +78,12 @@ export default function CustomerProfilePage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [customerId, router]);
+  }, [canRead, customerId, router]);
 
   async function saveCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const token = ensureAdminToken(router);
-    if (!token || !form) {
+    if (!token || !form || !canWrite) {
       return;
     }
 
@@ -90,7 +112,7 @@ export default function CustomerProfilePage() {
 
   async function toggleApproval() {
     const token = ensureAdminToken(router);
-    if (!token || !user) {
+    if (!token || !user || !canWrite) {
       return;
     }
 
@@ -120,7 +142,7 @@ export default function CustomerProfilePage() {
 
   async function deleteCustomer() {
     const token = ensureAdminToken(router);
-    if (!token) {
+    if (!token || !canWrite) {
       return;
     }
 
@@ -153,6 +175,11 @@ export default function CustomerProfilePage() {
       />
 
       <AlertStack error={error} message={message} />
+      {!canWrite && canRead ? (
+        <div className="alert alert-info" role="alert">
+          You have read-only access to customers.
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="card">
@@ -174,7 +201,7 @@ export default function CustomerProfilePage() {
                   </div>
                   <div className="flex-shrink-0">
                     <img
-                      src="/assets/images/application/img-accout-alert.png"
+                      src={getRequiredAdminImageUrl('/assets/images/application/img-accout-alert.png')}
                       alt="Customer verification"
                       className="img-fluid wid-80"
                     />
@@ -191,7 +218,7 @@ export default function CustomerProfilePage() {
                       <div className="chat-avtar d-inline-flex mx-auto">
                         <img
                           className="rounded-circle img-fluid wid-90 img-thumbnail"
-                          src="/assets/images/user/avatar-2.jpg"
+                          src={getRequiredAdminImageUrl('/assets/images/user/avatar-2.jpg')}
                           alt="Customer"
                         />
                         <i className={`chat-badge ${user.status === 1 ? 'bg-success' : 'bg-danger'} me-2 mb-2`} />
@@ -327,32 +354,38 @@ export default function CustomerProfilePage() {
                           <option value="0">No</option>
                         </select>
                       </div>
-                      <div className="col-12 text-end mt-2">
-                        <button type="submit" className="btn btn-primary" disabled={saving}>
-                          {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
-                      </div>
+                      {canWrite ? (
+                        <div className="col-12 text-end mt-2">
+                          <button type="submit" className="btn btn-primary" disabled={saving}>
+                            {saving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   </form>
                 </TableCard>
 
                 <div className="btn-page d-flex justify-content-between align-items-center">
                   <div>
-                    <button type="button" className="btn btn-danger" disabled={deleting} onClick={() => void deleteCustomer()}>
-                      {deleting ? 'Deleting...' : 'Delete User'}
-                    </button>
+                    {canWrite ? (
+                      <button type="button" className="btn btn-danger" disabled={deleting} onClick={() => void deleteCustomer()}>
+                        {deleting ? 'Deleting...' : 'Delete User'}
+                      </button>
+                    ) : null}
                   </div>
                   <div className="d-flex gap-2">
                     <Link className="btn btn-outline-secondary" href="/dashboard/web-users">
                       Cancel
                     </Link>
-                    <button type="button" className="btn btn-primary" disabled={togglingApproval} onClick={() => void toggleApproval()}>
-                      {togglingApproval
-                        ? 'Updating...'
-                        : user.status === 0
-                          ? 'Approve Profile'
-                          : 'Disapprove Profile'}
-                    </button>
+                    {canWrite ? (
+                      <button type="button" className="btn btn-primary" disabled={togglingApproval} onClick={() => void toggleApproval()}>
+                        {togglingApproval
+                          ? 'Updating...'
+                          : user.status === 0
+                            ? 'Approve Profile'
+                            : 'Disapprove Profile'}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </div>

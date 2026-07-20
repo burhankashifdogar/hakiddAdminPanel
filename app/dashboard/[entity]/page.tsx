@@ -1,12 +1,14 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { AdminListResponse, adminDelete, adminGet, adminPost, adminPut } from '@/lib/api';
+import { canReadEntity, canWriteEntity, getStoredAdminToken, getStoredAdminUser } from '@/lib/admin-auth';
 
 type Row = Record<string, unknown>;
 
-const READ_ONLY_ENTITIES = new Set(['analytics', 'lost-sales', 'pre-orders']);
+const READ_ONLY_ENTITIES = new Set(['analytics', 'pre-orders']);
 
 function normalizeEntity(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -42,8 +44,8 @@ function rowId(row: Row) {
 
 export default function EntityPage() {
   const params = useParams();
+  const router = useRouter();
   const entity = normalizeEntity(params?.entity as string | string[] | undefined);
-  const isReadOnly = READ_ONLY_ENTITIES.has(entity);
 
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,9 @@ export default function EntityPage() {
   const [createJson, setCreateJson] = useState('{}');
   const [editId, setEditId] = useState<number | null>(null);
   const [editJson, setEditJson] = useState('{}');
+  const [canRead, setCanRead] = useState(true);
+  const [canWrite, setCanWrite] = useState(false);
+  const isReadOnly = READ_ONLY_ENTITIES.has(entity) || !canWrite;
 
   const columns = useMemo(() => {
     const set = new Set<string>();
@@ -69,7 +74,25 @@ export default function EntityPage() {
   }, [rows]);
 
   useEffect(() => {
-    const token = localStorage.getItem('hakidd_admin_token');
+    const storedUser = getStoredAdminUser();
+    const nextCanRead = canReadEntity(storedUser, entity);
+    const nextCanWrite = canWriteEntity(storedUser, entity);
+
+    setCanRead(nextCanRead);
+    setCanWrite(nextCanWrite);
+
+    if (!nextCanRead) {
+      router.replace('/dashboard/forbidden');
+    }
+  }, [entity, router]);
+
+  useEffect(() => {
+    if (!canRead) {
+      setLoading(false);
+      return;
+    }
+
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return;
@@ -96,7 +119,7 @@ export default function EntityPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load data'))
       .finally(() => setLoading(false));
-  }, [entity, page, refresh, search]);
+  }, [canRead, entity, page, refresh, search]);
 
   async function createRecord(event: FormEvent) {
     event.preventDefault();
@@ -107,7 +130,7 @@ export default function EntityPage() {
     setError('');
     setMessage('');
 
-    const token = localStorage.getItem('hakidd_admin_token');
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return;
@@ -140,7 +163,7 @@ export default function EntityPage() {
       return;
     }
 
-    const token = localStorage.getItem('hakidd_admin_token');
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return;
@@ -174,7 +197,7 @@ export default function EntityPage() {
       return;
     }
 
-    const token = localStorage.getItem('hakidd_admin_token');
+    const token = getStoredAdminToken();
     if (!token) {
       window.location.href = '/login';
       return;
@@ -211,7 +234,7 @@ export default function EntityPage() {
             <div className="col-md-12">
               <ul className="breadcrumb">
                 <li className="breadcrumb-item">
-                  <a href="/dashboard">Home</a>
+                  <Link href="/dashboard">Home</Link>
                 </li>
                 <li className="breadcrumb-item" aria-current="page">
                   {toTitle(entity)}
@@ -239,7 +262,9 @@ export default function EntityPage() {
       ) : null}
       {isReadOnly ? (
         <div className="alert alert-info" role="alert">
-          This screen is read-only in the Node admin panel.
+          {READ_ONLY_ENTITIES.has(entity)
+            ? 'This screen is read-only in the Node admin panel.'
+            : 'You have read-only access to this screen.'}
         </div>
       ) : null}
 

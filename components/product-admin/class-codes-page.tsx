@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminListResponse, adminGet, adminPost } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, TableCard, ensureAdminToken, formatValue } from './common';
 
 type ClassCodeRow = {
@@ -24,7 +25,7 @@ function getImageUrl(row: ClassCodeRow) {
     return null;
   }
 
-  return row.image_url || (String(row.image).startsWith('http') ? row.image : `https://hakidd.s3.amazonaws.com/${row.image}`);
+  return getAdminImageUrl(row.image_url || row.image);
 }
 
 export default function ClassCodesPage() {
@@ -99,7 +100,16 @@ export default function ClassCodesPage() {
       />
       <AlertStack error={error} message={message} />
 
-      <TableCard header={<h5 className="mb-0">Class Codes</h5>}>
+      <TableCard
+        header={
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 className="mb-0">Class Codes</h5>
+            <Link href="/dashboard/class-codes/create" className="btn btn-primary btn-sm">
+              <i className="ti ti-plus f-18" /> Add Class Code
+            </Link>
+          </div>
+        }
+      >
         <div className="table-responsive">
           <table className="table table-striped table-hover table-bordered align-middle">
             <thead>

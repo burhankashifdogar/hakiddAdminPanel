@@ -3,6 +3,7 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminGet } from '@/lib/api';
+import { getAdminImageUrl } from '@/lib/assets';
 import { AlertStack, PageHeader, Pagination, TableCard, ensureAdminToken } from '@/components/product-admin/common';
 
 type PreOrderRow = {
@@ -233,7 +234,7 @@ export default function PreOrdersPage() {
                 rows.map((row, index) => {
                   const productId = String(row.product_id ?? '').trim();
                   const productName = String((row.product_name ?? productId) || '-').trim() || '-';
-                  const thumbnailUrl = typeof row.thumbnail_url === 'string' ? row.thumbnail_url : '';
+                  const thumbnailUrl = getAdminImageUrl(typeof row.thumbnail_url === 'string' ? row.thumbnail_url : '');
 
                   return (
                     <tr key={`${row.id ?? productId ?? index}`}>
@@ -247,7 +248,7 @@ export default function PreOrdersPage() {
                       <td>
                         {thumbnailUrl ? (
                           <img
-                            src={thumbnailUrl}
+                            src={thumbnailUrl ?? ''}
                             alt={productName}
                             className="user-avatar rounded wid-50 hie-50"
                             style={{ objectFit: 'cover' }}

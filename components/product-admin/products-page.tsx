@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AdminListResponse, adminGet } from '@/lib/api';
@@ -73,6 +73,20 @@ export default function ProductsPage() {
   const [categoriesFilter, setCategoriesFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('CA');
   const [langCodeFilter, setLangCodeFilter] = useState('en');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  function toggleRow(rowKey: string) {
+    setExpandedRows((currentRows) => {
+      const nextRows = new Set(currentRows);
+      if (nextRows.has(rowKey)) {
+        nextRows.delete(rowKey);
+      } else {
+        nextRows.add(rowKey);
+      }
+
+      return nextRows;
+    });
+  }
 
   useEffect(() => {
     const token = ensureAdminToken(router);
@@ -202,75 +216,105 @@ export default function ProductsPage() {
           <table className="table table-hover align-middle tbl-product">
             <thead>
               <tr>
+                <th style={{ width: 40 }} />
                 <th className="text-end">#No</th>
                 <th>Product Code</th>
                 <th>Product</th>
-                <th>Ship pac</th>
-                <th>Categories</th>
-                <th>Language</th>
                 <th className="text-end">Price</th>
-                <th className="text-end">Inner Pac</th>
                 <th className="text-center">Status</th>
-                <th className="text-center">Brand</th>
-                <th>Country</th>
-                <th>Image</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={12} className="text-center py-5 text-muted">
+                  <td colSpan={7} className="text-center py-5 text-muted">
                     Loading products...
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="text-center py-5 text-muted">
+                  <td colSpan={7} className="text-center py-5 text-muted">
                     No products found.
                   </td>
                 </tr>
               ) : (
-                rows.map((product, index) => (
-                  <tr key={String(product.id ?? index)}>
-                    <td className="text-end text-muted">{(page - 1) * 20 + index + 1}</td>
-                    <td className="text-nowrap">
-                      <span className="fw-semibold">{formatValue(product.product_id)}</span>
-                    </td>
-                    <td style={{ minWidth: 240 }}>
-                      <div className="fw-semibold text-dark">{formatValue(product.name)}</div>
-                      <small className="text-muted d-block mt-1">Class: {formatValue(product.class)}</small>
-                    </td>
-                    <td className="text-nowrap">{formatValue(product.ship_pac)}</td>
-                    <td style={{ minWidth: 220, whiteSpace: 'normal' }}>
-                      <span className="text-body">{formatValue(product.product_category)}</span>
-                    </td>
-                    <td className="text-nowrap">
-                      <LanguageLabel code={product.lang_code} />
-                    </td>
-                    <td className="text-end font-monospace fw-semibold">{formatPriceValue(product.selling_price)}</td>
-                    <td className="text-end text-nowrap">{formatValue(product.inner_pac)}</td>
-                    <td className="text-center">
-                      <StatusIcon active />
-                    </td>
-                    <td style={{ minWidth: 120 }}>
-                      <span className="text-body">{formatValue(product.brand)}</span>
-                    </td>
-                    <td className="text-nowrap">
-                      <span className="d-inline-flex align-items-center gap-2">
-                        <CountryIndicator country={product.country} />
-                        <span>{formatValue(product.country)}</span>
-                      </span>
-                    </td>
-                    <td className="text-nowrap">
-                      <Link
-                        href={`/dashboard/products/${encodeURIComponent(String(product.product_id ?? '').trim())}`}
-                        className="btn btn-outline-secondary btn-sm"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                rows.map((product, index) => {
+                  const rowKey = String(product.id ?? index);
+                  const isExpanded = expandedRows.has(rowKey);
+
+                  return (
+                    <Fragment key={rowKey}>
+                      <tr onClick={() => toggleRow(rowKey)} style={{ cursor: 'pointer' }}>
+                        <td className="text-center text-muted" style={{ width: 40 }}>
+                          <i className={isExpanded ? 'ti ti-chevron-up' : 'ti ti-chevron-down'} />
+                        </td>
+                        <td className="text-end text-muted">{(page - 1) * 20 + index + 1}</td>
+                        <td className="text-nowrap">
+                          <span className="fw-semibold">{formatValue(product.product_id)}</span>
+                        </td>
+                        <td style={{ minWidth: 240 }}>
+                          <div className="fw-semibold text-dark">{formatValue(product.name)}</div>
+                          <small className="text-muted d-block mt-1">Class: {formatValue(product.class)}</small>
+                        </td>
+                        <td className="text-end font-monospace fw-semibold">{formatPriceValue(product.selling_price)}</td>
+                        <td className="text-center">
+                          <StatusIcon active />
+                        </td>
+                        <td className="text-nowrap text-end">
+                          <Link
+                            href={`/dashboard/products/${encodeURIComponent(String(product.product_id ?? '').trim())}`}
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={7} className="p-0">
+                            <div className="p-3 bg-body-tertiary rounded m-2">
+                              <div className="row g-3">
+                                <div className="col-6 col-md-4 col-lg-3">
+                                  <div className="text-muted small text-uppercase">Ship pac</div>
+                                  <div className="fw-semibold">{formatValue(product.ship_pac)}</div>
+                                </div>
+                                <div className="col-6 col-md-4 col-lg-3">
+                                  <div className="text-muted small text-uppercase">Categories</div>
+                                  <div className="fw-semibold">{formatValue(product.product_category)}</div>
+                                </div>
+                                <div className="col-6 col-md-4 col-lg-3">
+                                  <div className="text-muted small text-uppercase">Language</div>
+                                  <div className="fw-semibold">
+                                    <LanguageLabel code={product.lang_code} />
+                                  </div>
+                                </div>
+                                <div className="col-6 col-md-4 col-lg-3">
+                                  <div className="text-muted small text-uppercase">Inner Pac</div>
+                                  <div className="fw-semibold">{formatValue(product.inner_pac)}</div>
+                                </div>
+                                <div className="col-6 col-md-4 col-lg-3">
+                                  <div className="text-muted small text-uppercase">Brand</div>
+                                  <div className="fw-semibold">{formatValue(product.brand)}</div>
+                                </div>
+                                <div className="col-6 col-md-4 col-lg-3">
+                                  <div className="text-muted small text-uppercase">Country</div>
+                                  <div className="fw-semibold">
+                                    <span className="d-inline-flex align-items-center gap-2">
+                                      <CountryIndicator country={product.country} />
+                                      <span>{formatValue(product.country)}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
