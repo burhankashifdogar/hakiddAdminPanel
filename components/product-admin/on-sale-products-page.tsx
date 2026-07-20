@@ -27,8 +27,12 @@ export default function OnSaleProductsPage() {
 
     const body = new FormData();
     body.append('file', file);
-    body.append('start_date', startDate);
-    body.append('end_date', endDate);
+    if (startDate) {
+      body.append('start_date', startDate);
+    }
+    if (endDate) {
+      body.append('end_date', endDate);
+    }
 
     try {
       setImporting(true);
@@ -71,23 +75,21 @@ export default function OnSaleProductsPage() {
         <form onSubmit={importSpecialProducts}>
           <div className="row g-3 align-items-end mb-2">
             <div className="col-md-3">
-              <label className="form-label">Start Date</label>
+              <label className="form-label">Start Date (Optional)</label>
               <input
                 type="date"
                 className="form-control"
                 value={startDate}
                 onChange={(event) => setStartDate(event.target.value)}
-                required
               />
             </div>
             <div className="col-md-3">
-              <label className="form-label">End Date</label>
+              <label className="form-label">End Date (Optional)</label>
               <input
                 type="date"
                 className="form-control"
                 value={endDate}
                 onChange={(event) => setEndDate(event.target.value)}
-                required
               />
             </div>
             <div className="col-md-4">
