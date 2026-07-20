@@ -153,6 +153,74 @@ button {
   }
 }
 
+/* Right-hand audit log sidebar — mirrors the left .pc-sidebar design. */
+.pc-sidebar.audit-sidebar {
+  left: auto;
+  right: 0;
+  top: 74px;
+  width: 300px;
+  z-index: 1024;
+  border-right: none;
+  border-left: var(--pc-sidebar-border, 1px solid rgba(0, 0, 0, 0.08));
+}
+
+.pc-sidebar.audit-sidebar .navbar-wrapper {
+  height: 100%;
+}
+
+.pc-sidebar.audit-sidebar.audit-sidebar-collapsed {
+  width: 64px;
+}
+
+.pc-sidebar.audit-sidebar.audit-sidebar-collapsed .pc-link {
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+}
+
+.pc-sidebar.audit-sidebar.audit-sidebar-collapsed .pc-micon {
+  margin-right: 0;
+}
+
+.audit-sidebar-counter {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+}
+
+.audit-sidebar-entry {
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 1025px) {
+  .pc-container,
+  .pc-footer {
+    transition: margin-right 0.2s ease;
+  }
+
+  body.audit-sidebar-open .pc-container,
+  body.audit-sidebar-open .pc-footer {
+    margin-right: 300px;
+  }
+
+  body.audit-sidebar-rail .pc-container,
+  body.audit-sidebar-rail .pc-footer {
+    margin-right: 64px;
+  }
+}
+
+@media (max-width: 1024.98px) {
+  .pc-sidebar.audit-sidebar {
+    top: 60px;
+  }
+
+  .pc-sidebar.audit-sidebar.audit-sidebar-collapsed {
+    width: 48px;
+  }
+}
+
 .pc-content {
   padding-bottom: 80px;
 }
